@@ -20,39 +20,55 @@ from torchvision.utils import save_image
 import norm
 
 cuda = True if torch.cuda.is_available() else False
+# PS:中国語の部分はpytorchの関数についての説明．
+#    必要であれば公式ドキュメントを確認してください．
 
 weight_info = {
+    # 使用するGANモデルの重み情報．
+    # 重みの読み込みや，生成画像の保存などに関連する．
     "date":21119,
     "class":["bp0","bp1","bp2","gp0","gp1"],
     "normlizer":"minmax"
 }
 
-num_requier = 3000
+num_requier = 3000 # 生成する画像の数．
+model_nums = 5 # 使用するモデルの数．単一モデルをしようする場合は1．0にすると画像生成はしない．
+for i_num in range(model_nums):
+    # 5クラスのがぞうをまとめて生成する．
+    
+    # i_num = 4 # model_name_list中の特定なモデルをしようしたいときに，model_numsを1にしてからこの行を有効にする．
 
-
-for i_num in range(5):
-
-    # i_num = 4
-
-    # model_name = "model_%d_%s_%s" %(weight_info["date"],weight_info["class"],weight_info["normlizer"])
     model_name_list = [
+        # 使用したモデルのリスト
         "model_211116_bp0_minmax_96x96_mix",
         "model_211116_bp1_minmax_96x96_mix",
         "model_211116_bp2_minmax_96x96_mix",
         "model_211116_gp0_minmax_96x96_mix",
         "model_211116_gp-1_minmax_96x96_mix"
     ]
+
+    # model_name = "model_%d_%s_%s" %(weight_info["date"],weight_info["class"],weight_info["normlizer"])
+    # weight_infoによって自動的にモデル名を生成する．格式が違うと使用できない．
+
     # model_name = "model_21927_gp-1_minmax_96x96_mix"
+    # 特定なモデルをしようしたときに．
+
     model_name = model_name_list[i_num]
     # model_date = str(weight_info["date"])
     model_date = model_name[6:12]
+
     # weights_num = [16,25,14,26,22][i_num]
     weights_num = None
+    # 重み読み込み用，Noneである場合モデルフォルダないを番号が一番大きいおもみを読み込み．
+
     config_csv = "model_configs/%s_config.csv" % model_name
     # config_csv = "model_configs/model_2184_minmax_siwa_160_config.csv"
-    print("config csv file path:",config_csv)
+    # 学習時のGANモデルのパラメータ．
 
+    print("config csv file path:",config_csv)
+    
     with open(config_csv,"r") as csv_file:
+        # 学習時のGANモデルのパラメータを読み込み．
         csv_reader = csv.reader(csv_file)
         rows = []
         config = {}
@@ -71,12 +87,14 @@ for i_num in range(5):
     last_epoch = num_requier%config["batch_size"]
 
     if not os.path.exists("images/generate_image/%s" %model_name):
+        # 生成する画像を保存するためのフォルダが存在するかを確認
         os.mkdir("images/generate_image/%s" %model_name)
 
     if not os.path.exists("images/generate_image/%s/%s" %(model_name,weight_info["class"][i_num])):
+        # 生成する画像を保存するためのフォルダが存在しない場合，自動的に生成する．
         os.mkdir("images/generate_image/%s/%s" %(model_name,weight_info["class"][i_num]))
 
-    #learnable parameters的载入
+    # モデルの重みを読み込み
     def weights_load(model,load_path,train_mode=False):
         model.load_state_dict(torch.load(load_path))
         if train_mode:
@@ -85,12 +103,15 @@ for i_num in range(5):
             model.eval()
 
     class generator(nn.Module):
-        #类初始化
+        # 生成器構築．
+        # 使用したモデルの生成器と全く同じである必要がある．
+        # GANモデルの構造が変更したら変更する必要がある．
+
         def __init__(self):
             # super(class,self)函数会找到class的父类，在将子类对象转换父类对象
             super().__init__()
 
-            self.init_size = config["img_size"] // 4 # 输入图片的尺寸
+            self.init_size = config["img_size"] // 4 # 入力がぞうのサイズ
             # 建立线性模型。nn.Linear(batch_size,size)对输入进行线性转换。y=xAt+b。batch_size可视为输入的样本数。
             # 常用作全链接层，size是输入权重的次元数，out_size是输出权重的次元数，即分类的class数。
             self.l1 = nn.Sequential(nn.Linear(config["latent_dim"],128*self.init_size**2))
@@ -134,8 +155,9 @@ for i_num in range(5):
         generator.cuda()
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
-    weights_list = os.listdir("model_weights/%s" %model_name)
     if not  weights_num:
+        # weight_numが指定しない場合モデルフォルダないを番号が一番大きいおもみを読み込み．
+        weights_list = os.listdir("model_weights/%s" %model_name)
         nums = []
         for item in weights_list:
             item = item[item.index("_")+1:]
@@ -149,21 +171,21 @@ for i_num in range(5):
     weights_load(generator,weights_path)
     print(weights_path)
 
-    with open("images/generate_image/%s/%s_%d.csv" %(model_name,weight_info["class"][i_num],num_requier),"w") as ds_file:
-        writer = csv.writer(ds_file)
+    i = 0
+    for epoch in range(n_epochs):
+        # 画像生成
+        z = Variable(Tensor(np.random.normal(0,1,(config["batch_size"],config["latent_dim"]))))
+        gen_imgs = generator(z)
 
-        i = 0
-        for epoch in range(n_epochs):
-            z = Variable(Tensor(np.random.normal(0,1,(config["batch_size"],config["latent_dim"]))))
-            gen_imgs = generator(z)
-
-            print(gen_imgs.size())
-            for img in gen_imgs:
-                # plt.imsave("images/generate_image/%s/%s/%d.png" %(model_name,weight_info["class"],i),norm.Normalize_circle_minmax(img[0].cpu().detach().numpy()),cmap="Greys_r")
-                gen_image, _ = norm.Normalize_circle_minmax(img[0].cpu().detach().numpy())
-                cv2.imwrite("images/generate_image/%s/%s/%d.bmp" %(model_name,weight_info["class"][i_num],i),255.*gen_image)
-                writer.writerow(torch.reshape(img,(-1,)).cpu().detach().numpy())
-                i+=1
+        print(gen_imgs.size())
+        for img in gen_imgs:
+            # plt.imsave("images/generate_image/%s/%s/%d.png" %(model_name,weight_info["class"],i),norm.Normalize_circle_minmax(img[0].cpu().detach().numpy()),cmap="Greys_r")
+            gen_image, _ = norm.Normalize_circle_minmax(img[0].cpu().detach().numpy())
+            # 正規化
+            cv2.imwrite("images/generate_image/%s/%s/%d.bmp" %(model_name,weight_info["class"][i_num],i)
+                        ,255.*gen_image)
+            # .bmpは1より小さい値を0にする．正常に画像を保存するために画像を255倍にする．
+            i+=1
 
 # z = Variable(Tensor(np.random.normal(0,1,(last_epoch,config["latent_dim"]))))
 # gen_imgs = generator(z)

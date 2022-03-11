@@ -26,7 +26,7 @@ class dataset:
 
     def Dataset(self, data_path, mode=None):
         """
-        create an dataset for the som
+        create an dataset
         :param data_path: the directory path of the pipe images
         :param mode: normalize the image with average to 0 and variance to 1 as default with keyword "zero-one",
                      keyword "min-max" nomalize image pixel range from 0 to 1  

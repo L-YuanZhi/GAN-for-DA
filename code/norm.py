@@ -94,7 +94,10 @@ def Normalize_circle_minmax(image,start=0.,stop=1.):
     return output, meanInPipe/numInPipe
 
 def execute(inPath,outPath,csvFile):
-    bgDatemm = []
+    # bp=NG gp=OK 
+    # mmはNormlize_cirlcle_minmaxで正規化した画像
+    # ac Normalize_circleで正規化した画像
+    bgDatemm = []　
     gpDatemm = []
     bpDatemm = []
     bgDateac = []

@@ -22,6 +22,11 @@ import matplotlib.animation as animation
 from IPython.display import HTML 
 from torchvision.utils import save_image
 
+# https://github.com/eriklindernoren/PyTorch-GAN
+# を参考　
+# このプログラムはまだ調整が必要！！！
+
+
 config = {
     "model_name":None,#"model_21727_ReLU",
     "latent_dim":100,

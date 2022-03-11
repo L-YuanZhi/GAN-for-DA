@@ -18,7 +18,14 @@ from torchvision.utils import save_image
 
 cuda = True if torch.cuda.is_available() else False
 
+# https://github.com/eriklindernoren/PyTorch-GAN
+# を参考
+
+# PS:中国語の部分はpytorchの関数についての説明．
+#    必要であれば公式ドキュメントを確認してください．
+
 config = {
+    # モデルのパラメータ設定
     "model_name":None,#"model_21727_ReLU",
     "latent_dim":100,
     "channels":1,
@@ -33,17 +40,18 @@ config = {
     "real_img":"bp_minmax_96x96_rs_area_mix.pt"
 }
 
-#获取时间日期
+# 日付け確定
 def date():
     lt= time.localtime(time.time())
     return "_"+str(lt[0])[-2:]+str(lt[1])+str(lt[2])+"_"
 
-#权重初始化
 def weights_init_normal(m):
-    #获取模组名称, classname是字符串
+    # 重み初期化．
+
+    # 获取模组名称, classname是字符串
     classname = m.__class__.__name__
     
-    #对卷积层和BN层进行初始化
+    # 畳み込み層とBN層の初期化．
     # str.find() 会在str中查找目标字符串，不存在则返回-1
     if classname.find("Conv") != -1:
         # nn.init.normal_(tensor,mean=0.,std=1.) 从给定的正态分布N(mean,std^2)中生成值填充至tensor
@@ -53,8 +61,8 @@ def weights_init_normal(m):
         # nn.init.constant_(tensor,val) 以val填充tensor
         torch.nn.init.constant_(m.bias.data,0.0)
 
-#learnable parameters(weights/bias)的存储
 def weights_save(model,optimizer,save_path,date,batches_done):
+    # 重みの保存
     classname = model.__class__.__name__
     print("Class name:",classname)
     print("Model's state_dict:")
@@ -68,18 +76,20 @@ def weights_save(model,optimizer,save_path,date,batches_done):
     for var_name in optimizer  .state_dict():
         print(var_name,"\t",optimizer.state_dict()[var_name])
 
-#learnable parameters的载入
 def weights_load(model,load_path,train_mode=False):
+    # 重みの読み込み
     model.load_state_dict(torch.load(load_path))
     if train_mode == True:
         model.train()
     else:
         model.eval()
 
-#生成器类
 class generator(nn.Module):
-    #类初始化
+    # 生成器
+    
     def __init__(self):
+        #初期化
+
         # super(class,self)函数会找到class的父类，在将子类对象转换父类对象
         super().__init__()
 
@@ -128,9 +138,9 @@ class generator(nn.Module):
         # print("生成器输出大小:",img.shape)
         return img
 
-
-#识别器类
 class discriminator(nn.Module):
+    #識別器
+
     def __init__(self):
         super().__init__()
 
@@ -166,10 +176,10 @@ class discriminator(nn.Module):
 
         return validity
 
-#损失函数
+# 損失関数
 adversarial_loss = nn.BCELoss()
 
-#初始化G/D模型
+# G/Dモデル初期化
 generator = generator()
 discriminator = discriminator()
 
@@ -178,18 +188,17 @@ if cuda:
     discriminator.cuda()
     adversarial_loss.cuda()
 
-#权重初始化
+# 重み初期化
 generator.apply(weights_init_normal)
 discriminator.apply(weights_init_normal)
 
-#数据输入
+# 学習データ入力
 dataloader = DataLoader(
     torch.load(os.path.join("input_tensor",config["real_img"])),
     batch_size=config["batch_size"],
     shuffle=True
 )
 
-#优化器
 learn_rate = config["lr"]
 b1 = config["b1"]
 b2 = config["b2"]
@@ -200,14 +209,16 @@ optimizer_D = torch.optim.Adam(discriminator.parameters(),lr=learn_rate,betas=(b
 
 Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
-#weights save/load path and settings
+# 重み保存/読み込みの設定
+
+# 重み及び生成画像のフォルダ名と保存パスの確認と生成
 dates = date()
 if config["model_name"] == None:
     config["model_name"] = "model%s%s" %(dates,config["real_img"][:-3])
-csv_file_path = "model_configs/%s_config.csv" %config["model_name"]
-model_structure_path =  "model_configs/%s_structure.csv" %config["model_name"]
-images_path = "images/%s" %config["model_name"]
-weights_path = "model_weights/%s" %config["model_name"]
+csv_file_path = "model_configs/%s_config.csv" %config["model_name"] # モデルパラメータのパス
+model_structure_path =  "model_configs/%s_structure.csv" %config["model_name"] # モデル構造のパス
+images_path = "images/%s" %config["model_name"] # 生成画像のパス
+weights_path = "model_weights/%s" %config["model_name"] # モデル重みのパス
 
 if not os.path.exists(images_path):
     os.mkdir(images_path)
@@ -235,23 +246,22 @@ with open(model_structure_path,"w") as msp:
 
 # training
 loss_log = open("%s/loss_log.csv" %weights_path,"w")
+# 学習過程の損失関数の記録
 loss_log_writer = csv.writer(loss_log)
 loss_log_writer.writerow(["g_loss","d_loss"])
 for epoch in range(config["n_epochs"]):
     for i,imgs in enumerate(dataloader):
         
         # print("imgs.i",i)
-        # 
         valid = Variable(Tensor(imgs.shape[0],1).fill_(1.0),requires_grad=False)
         fake = Variable(Tensor(imgs.shape[0],1).fill_(0.0),requires_grad=False)
-        #
+
         real_imgs = Variable(imgs.type(Tensor))
 
         #Train Generator
 
         optimizer_G.zero_grad()
 
-        #
         z = Variable(Tensor(np.random.normal(0,1,(imgs.shape[0],config["latent_dim"]))))
 
         gen_imgs = generator(z)
@@ -265,7 +275,6 @@ for epoch in range(config["n_epochs"]):
 
         optimizer_D.zero_grad()
 
-        #
         real_loss = adversarial_loss(discriminator(real_imgs),valid)
         fake_loss = adversarial_loss(discriminator(gen_imgs.detach()),fake)
         d_loss = (real_loss + fake_loss) / 2.
@@ -285,7 +294,10 @@ for epoch in range(config["n_epochs"]):
         # if epoch % 100 == 0 and i == 0:
             save_path = "%s/%d.bmp" % (images_path,batches_done / config["sample_interval"])
             # save_path = "%s/%d.bmp" % (images_path,epoch)
+
+            # 生成器が生成するものを4Ｘ4で保存．効果確認用
             save_image(255.*gen_imgs.data[:16],save_path,nrow = 4, normalize=True)
+
             weights_save(generator,optimizer_G,weights_path,dates,batches_done / config["sample_interval"])
             # weights_save(generator,optimizer_G,weights_path,dates,epoch)
 
