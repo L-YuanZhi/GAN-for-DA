@@ -1,7 +1,7 @@
 import os
 import cv2 
 import csv
-import plotly 
+import plotly # data visualizing
 import warnings
 import seaborn
 
@@ -17,6 +17,7 @@ from sklearn.mixture import GaussianMixture
 warnings.filterwarnings("ignore")
 # plotly.offline.init_notebook_mode(connected=True)
 
+# pd.read_csvで必要な情報を読み取り．
 # datas = pd.read_csv("input_tensor/model_21928_bp1_none_96x96_mix.csv")
 # datas = pd.read_csv("output/minmax_96x96_mix/gp_value.csv")
 # datas = pd.read_csv("4410_value_none.csv")
