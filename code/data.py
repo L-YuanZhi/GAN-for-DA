@@ -8,7 +8,12 @@ import norm
 import csv
 
 class dataset:
+    #フォルダから画像を入力して，処理した後にtensorとして保存．
     def __init__(self, img_size=100):
+        """
+        initital function
+        :param img_size: all image will resized to this value.
+        """
         self.__dataset = None
         self.__set_len = None
         self.__image_size = img_size
@@ -36,12 +41,19 @@ class dataset:
         
         for dirs in os.listdir(data_path):
             for fileName in os.listdir(os.path.join(data_path,dirs)):
-                input_image = plt.imread(os.path.join(data_path,dirs,fileName)) # original image for training the model
+                input_image = plt.imread(os.path.join(data_path,dirs,fileName))
+                # original image for training the model
+                
                 image = cv2.resize(input_image,(self.__image_size,self.__image_size))
+                # resize the image to img_size
+                
                 self.__image_size = image.shape
+                
                 if mode == None or mode == "zero-one":
+                    # normalize images
                     normalized_image = norm.Normalize_circle(image) # normalized image
                 elif mode == "min-max":
+                    # normalize images
                     normalized_image = norm.Normalize_circle_minmax(image)
     
                 dataset.append(normalized_image)
@@ -53,6 +65,11 @@ class dataset:
         return torch.tensor(dataset)
 
 def dataGet(input_path,save_path):
+    """
+    get the min/max/mean values of images, and save as CSV file.
+    :param input_path: the path of directory witch image are stored.
+    :param save_path: csv file name or path.
+    """
     with open(save_path,"w") as csv_file:
         writer = csv.writer(csv_file) 
         writer.writerow(["file_name","min","max","mean"])
@@ -62,15 +79,18 @@ def dataGet(input_path,save_path):
             if d[-4:] != ".csv":
                 image_list = os.listdir(os.path.join(input_path,d))
                 for item in image_list:
+                    # loading image from directory
                     image = plt.imread(os.path.join(input_path,d,item))
-
+                    
+                    #calculate the pipe area.
                     shape = image.shape[0]
                     c = shape/2
                     rs = 10*shape/294
                     r = c-rs 
 
-                    aoi = []
-
+                    aoi = []# aoi means area of interesting
+                    
+                    #collecting the density value of pixels inside the pipe arae
                     for x,y in np.argwhere(image>=0):
                         if (x-c)**2+(y-c)**2<=r**2:
                             aoi.append(image[x,y])
@@ -79,6 +99,7 @@ def dataGet(input_path,save_path):
                     m2 = np.max(aoi)
                     m3 = np.mean(aoi)
 
+                    # write the values into the csv file
                     writer.writerow([item,m1,m2,m3])
 
 if __name__ == "__main__":
