@@ -8,7 +8,7 @@ import torch
 
 import torch.nn as nn 
 import torch.nn.parallel
-# import torch.nn.DataParallel #由于GPU平行学习
+# import torch.nn.DataParallel #用于GPU平行学习
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data as data
